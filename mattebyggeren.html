@@ -1,0 +1,2972 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatteByggeren</title>
+  <style>
+    /* ============================
+       TEMA-VARIABLER
+       ============================ */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --canvas-bg: #ffffff;
+      --toolbar-bg: #f8fafc;
+      --panel-bg: #ffffff;
+      --input-bg: #ffffff;
+      --modal-backdrop: rgba(0,0,0,0.4);
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border-color: #334155;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --canvas-bg: #1e293b;
+      --toolbar-bg: #1e293b;
+      --panel-bg: #1e293b;
+      --input-bg: #334155;
+      --modal-backdrop: rgba(0,0,0,0.6);
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ============================
+       VERKTØYLINJE
+       ============================ */
+    #toolbar {
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.4rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .toolbar-separator {
+      width: 1px;
+      height: 2rem;
+      background: var(--border-color);
+      margin: 0 0.35rem;
+    }
+
+    .tb-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.2rem;
+      height: 2.2rem;
+      padding: 0 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.4rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .tb-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .tb-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .tb-btn-sm {
+      font-size: 0.8rem;
+      padding: 0 0.5rem;
+    }
+
+    /* ============================
+       FARGEKNAPPER
+       ============================ */
+    .color-btn {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .color-btn:hover { transform: scale(1.15); }
+    .color-btn.active {
+      border-color: var(--text-primary);
+      box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--text-primary);
+    }
+
+    /* ============================
+       HOVEDLAYOUT
+       ============================ */
+    #main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ============================
+       FRITT CANVAS
+       ============================ */
+    #canvas {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--canvas-bg);
+      overflow: hidden;
+    }
+
+    #step-display {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    /* Subtilt rutenett for å hjelpe med plassering */
+    #step-display::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, var(--border-color) 0.8px, transparent 0.8px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .empty-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      text-align: center;
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ============================
+       INPUT-SONE
+       ============================ */
+    #input-zone {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    #math-input {
+      flex: 1;
+      height: 2.5rem;
+      padding: 0 0.75rem;
+      font-size: 1.1rem;
+      border: 2px solid var(--border-color);
+      border-radius: 0.4rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      outline: none;
+    }
+    #math-input:focus { border-color: var(--accent); }
+    #math-input::placeholder { color: var(--text-secondary); }
+
+    .input-color-bar {
+      width: 4px;
+      height: 2rem;
+      border-radius: 2px;
+    }
+
+    /* ============================
+       STEG-PANEL
+       ============================ */
+    #step-panel {
+      width: 200px;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .step-panel-header {
+      padding: 0.6rem 0.75rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .step-list { flex: 1; overflow-y: auto; padding: 0.4rem; }
+
+    .step-card {
+      padding: 0.5rem 0.6rem;
+      margin-bottom: 0.25rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+    }
+    .step-card:hover { background: var(--bg-tertiary); }
+    .step-card.active { background: var(--accent); color: white; }
+    .step-card .step-num { font-weight: 700; min-width: 1.3rem; }
+    .step-card .step-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; opacity: 0.7; }
+    .step-card .step-delete { opacity: 0; cursor: pointer; padding: 0 0.2rem; }
+    .step-card:hover .step-delete { opacity: 0.6; }
+
+    .step-panel-footer {
+      padding: 0.4rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 0.2rem;
+    }
+    .step-panel-footer button {
+      flex: 1;
+      padding: 0.4rem;
+      font-size: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.3rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .step-panel-footer button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ============================
+       DRABARE ELEMENTER PÅ CANVAS
+       ============================ */
+    .canvas-item {
+      position: absolute;
+      cursor: grab;
+      z-index: 1;
+      transition: box-shadow 0.15s;
+      border-radius: 0.2em;
+    }
+
+    .canvas-item:hover {
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+
+    .canvas-item.dragging {
+      cursor: grabbing;
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    .canvas-item.selected {
+      box-shadow: 0 0 0 3px var(--accent);
+    }
+
+    /* ============================
+       MATTE-ELEMENTER
+       ============================ */
+    .item-number, .item-operator, .item-text, .item-currency {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 4rem;
+      line-height: 1.2;
+      padding: 0.05em 0.15em;
+      color: var(--text-primary);
+    }
+
+    .item-operator {
+      color: var(--text-secondary);
+    }
+
+    .item-emoji {
+      font-family: system-ui, sans-serif;
+      font-size: 3.5rem;
+      line-height: 1.2;
+      padding: 0.05em;
+    }
+
+    /* Eksponent og indeks i matte-elementer */
+    .item-number sup, .item-operator sup, .item-text sup, .item-currency sup,
+    .item-fraction sup {
+      font-size: 0.52em;
+      vertical-align: super;
+      line-height: 0;
+    }
+    .item-number sub, .item-operator sub, .item-text sub, .item-currency sub,
+    .item-fraction sub {
+      font-size: 0.52em;
+      vertical-align: sub;
+      line-height: 0;
+    }
+
+    /* Farger */
+    [data-color="red"]    { color: #ef4444 !important; }
+    [data-color="blue"]   { color: #3b82f6 !important; }
+    [data-color="green"]  { color: #22c55e !important; }
+    [data-color="orange"] { color: #f97316 !important; }
+    [data-color="purple"] { color: #a855f7 !important; }
+    [data-color="pink"]   { color: #ec4899 !important; }
+    [data-color="brown"]  { color: #92400e !important; }
+
+    /* ============================
+       BRØK
+       ============================ */
+    .item-fraction {
+      display: inline-grid;
+      grid-template-rows: auto auto auto;
+      align-items: center;
+      justify-items: center;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 3rem;
+      line-height: 1.2;
+      padding: 0.1em 0.25em;
+    }
+
+    .item-fraction .frac-num,
+    .item-fraction .frac-den {
+      padding: 0.05em 0.15em;
+    }
+
+    .item-fraction .frac-line {
+      width: 100%;
+      height: 3px;
+      background: var(--text-primary);
+      border-radius: 2px;
+      min-width: 1.5em;
+    }
+
+    /* ============================
+       NORSKE SEDLER
+       ============================ */
+    .item-banknote {
+      border-radius: 6px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .item-banknote img {
+      height: 80px;
+      width: auto;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* Fallback for sedler uten bilde (500, 1000) */
+    .item-banknote-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-weight: 800;
+      color: white !important;
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.25);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      font-size: 1.8rem;
+      min-width: 100px;
+      height: 80px;
+    }
+
+    .item-banknote-500  { background: linear-gradient(135deg, #a67c00, #d4a017); }
+    .item-banknote-1000 { background: linear-gradient(135deg, #5e2d8e, #9c27b0); }
+
+    :fullscreen .item-banknote img { height: 120px; }
+    :fullscreen .item-banknote-fallback { height: 120px; font-size: 2.5rem; }
+
+    /* ============================
+       FLYTENDE INPUT PÅ CANVAS
+       ============================ */
+    /* ============================
+       ZOOM-KONTROLL
+       ============================ */
+    #zoom-control {
+      position: absolute;
+      bottom: 0.6rem;
+      right: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.25rem 0.4rem;
+      border-radius: 1.5rem;
+      box-shadow: var(--shadow);
+      z-index: 20;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    #zoom-control:hover { opacity: 1; }
+
+    #zoom-control button {
+      width: 1.6rem;
+      height: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+    #zoom-control button:hover { background: var(--bg-tertiary); }
+
+    #zoom-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      min-width: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .canvas-input {
+      position: absolute;
+      z-index: 50;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 3rem;
+      padding: 0.1em 0.2em;
+      border: 2px solid var(--accent);
+      border-radius: 0.3rem;
+      background: var(--canvas-bg);
+      color: var(--text-primary);
+      outline: none;
+      min-width: 80px;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+    }
+
+    /* ============================
+       NORSKE MYNTER
+       ============================ */
+    .item-coin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-weight: 800;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #dbb754, #c9a33a);
+      color: #5a4318 !important;
+      border: 3px solid #b8952e;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.25);
+      font-size: 1.3rem;
+    }
+
+    /* ============================
+       EMOJI-PANEL
+       ============================ */
+    .popup-panel {
+      position: fixed;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem;
+      padding: 0.6rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 50;
+      width: 270px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .popup-panel.hidden { display: none; }
+
+    .emoji-cat-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0.4rem 0 0.2rem;
+    }
+    .emoji-cat-title:first-child { margin-top: 0; }
+
+    .emoji-grid { display: flex; flex-wrap: wrap; gap: 0.2rem; }
+
+    .emoji-btn {
+      width: 2.3rem;
+      height: 2.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      border: none;
+      background: transparent;
+      border-radius: 0.3rem;
+      cursor: pointer;
+    }
+    .emoji-btn:hover { background: var(--bg-tertiary); }
+
+    /* ============================
+       RESIZE-HANDLE
+       ============================ */
+    .resize-handle {
+      position: absolute;
+      bottom: -7px;
+      right: -7px;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border: 2px solid white;
+      border-radius: 50%;
+      cursor: ns-resize;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 10;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .canvas-item:hover .resize-handle,
+    .canvas-item.selected .resize-handle { opacity: 1; }
+
+    /* ============================
+       BRØK-POPOVER (inline, ikke blokkerende)
+       ============================ */
+    .frac-popover {
+      position: fixed;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem;
+      padding: 0.65rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 70;
+      width: 190px;
+      animation: fpopIn 0.12s ease;
+    }
+    .frac-popover.hidden { display: none; }
+    @keyframes fpopIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .frac-pop-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .frac-pop-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 0.4rem;
+    }
+    .frac-pop-input {
+      width: 100%;
+      height: 2rem;
+      padding: 0 0.4rem;
+      font-size: 1.1rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 0.3rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      outline: none;
+      text-align: center;
+      font-family: 'Georgia', serif;
+    }
+    .frac-pop-input:focus { border-color: var(--accent); }
+    .frac-pop-divider {
+      width: 70%;
+      height: 2px;
+      background: var(--text-secondary);
+      border-radius: 1px;
+      margin: 0.25rem 0;
+    }
+    .frac-pop-preview {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 3rem;
+      padding: 0.2rem;
+      background: var(--bg-tertiary);
+      border-radius: 0.3rem;
+      margin-bottom: 0.4rem;
+    }
+    .frac-pop-footer {
+      display: flex;
+      gap: 0.3rem;
+      justify-content: flex-end;
+    }
+    .frac-pop-footer button {
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.3rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-primary);
+    }
+    .frac-pop-footer .fp-ok { background: var(--accent); color: white; border-color: var(--accent); }
+    .frac-pop-footer .fp-ok:hover { background: var(--accent-hover); }
+
+    /* ============================
+       HURTIGMENY (QUICK MENU)
+       ============================ */
+    .quick-menu {
+      position: absolute;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem;
+      padding: 0.4rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 60;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      max-width: 240px;
+    }
+    .quick-menu.hidden { display: none; }
+    .qm-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.3rem 0.55rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.35rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .qm-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .qm-sep { width: 100%; height: 1px; background: var(--border-color); margin: 0.1rem 0; }
+
+    /* Seddelknapper i panelet */
+    .sedler-btn {
+      width: auto !important;
+      padding: 0.15rem 0.45rem !important;
+      font-size: 0.7rem !important;
+      font-weight: 700 !important;
+      color: white !important;
+      border-radius: 4px !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    }
+    .sedler-btn.s50   { background: linear-gradient(135deg, #2d7a2f, #4caf50) !important; }
+    .sedler-btn.s100  { background: linear-gradient(135deg, #b71c1c, #e53935) !important; }
+    .sedler-btn.s200  { background: linear-gradient(135deg, #1565c0, #42a5f5) !important; }
+    .sedler-btn.s500  { background: linear-gradient(135deg, #a67c00, #d4a017) !important; }
+    .sedler-btn.s1000 { background: linear-gradient(135deg, #5e2d8e, #9c27b0) !important; }
+
+    /* Myntknapper i panelet */
+    .mynt-btn {
+      width: 2rem !important;
+      height: 2rem !important;
+      border-radius: 50% !important;
+      font-size: 0.65rem !important;
+      font-weight: 700 !important;
+      background: linear-gradient(145deg, #dbb754, #c9a33a) !important;
+      color: #5a4318 !important;
+      border: 2px solid #b8952e !important;
+    }
+
+    /* ============================
+       MODAL
+       ============================ */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: var(--modal-backdrop);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-backdrop.hidden { display: none; }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow-lg);
+      min-width: 340px;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .modal-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .modal-label { font-size: 0.85rem; font-weight: 500; min-width: 4.5rem; color: var(--text-secondary); }
+
+    .modal-input {
+      flex: 1;
+      height: 2.2rem;
+      padding: 0 0.6rem;
+      font-size: 1rem;
+      border: 2px solid var(--border-color);
+      border-radius: 0.4rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      outline: none;
+      text-align: center;
+      font-family: 'Georgia', serif;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+
+    .modal-colors { display: flex; gap: 0.25rem; }
+    .mini-color-btn {
+      width: 1.3rem;
+      height: 1.3rem;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      cursor: pointer;
+    }
+    .mini-color-btn:hover { transform: scale(1.15); }
+    .mini-color-btn.active { border-color: var(--text-primary); box-shadow: 0 0 0 1px var(--text-primary); }
+
+    .modal-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem;
+      margin: 0.75rem 0;
+      border-radius: 0.4rem;
+      background: var(--bg-tertiary);
+      font-family: 'Georgia', serif;
+      font-size: 2rem;
+    }
+    .modal-preview .item-fraction { font-size: 1.8rem; }
+
+    .modal-actions { display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.75rem; }
+    .modal-actions button {
+      padding: 0.4rem 1rem;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+    }
+    .btn-primary { background: var(--accent); color: white; border-color: var(--accent) !important; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--input-bg); color: var(--text-primary); }
+
+    /* ============================
+       FULLSKJERM
+       ============================ */
+    :fullscreen #toolbar,
+    :fullscreen #step-panel,
+    :fullscreen #input-zone { display: none !important; }
+    :fullscreen #canvas { height: 100vh; }
+    :fullscreen .item-number, :fullscreen .item-operator, :fullscreen .item-text, :fullscreen .item-currency { font-size: 5.5rem; }
+    :fullscreen .item-fraction { font-size: 4rem; }
+    :fullscreen .item-emoji { font-size: 5rem; }
+    /* Bildesedler håndteres av .item-banknote img ovenfor, fallback av .item-banknote-fallback */
+    :fullscreen .item-coin { width: 90px; height: 90px; font-size: 1.6rem; }
+    :fullscreen #fs-nav { display: flex !important; }
+
+    #fs-nav {
+      display: none;
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.4rem 0.8rem;
+      border-radius: 2rem;
+      box-shadow: var(--shadow-lg);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      z-index: 200;
+      opacity: 0.6;
+    }
+    #fs-nav:hover { opacity: 1; }
+    #fs-nav button { background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 1rem; padding: 0.2rem 0.4rem; border-radius: 0.3rem; }
+
+    /* ============================
+       REGELBOK-PANEL
+       ============================ */
+    #regelbok-panel {
+      position: fixed;
+      top: 4rem;
+      right: 0.5rem;
+      width: min(560px, 94vw);
+      max-height: calc(100vh - 5rem);
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+    }
+    #regelbok-panel.hidden { display: none; }
+
+    .regelbok-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 700;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    .regelbok-header button {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0.1rem 0.3rem;
+      border-radius: 0.3rem;
+    }
+    .regelbok-header button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+    .regelbok-tabs {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .regelbok-tab {
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .regelbok-tab:hover { background: var(--bg-tertiary); }
+    .regelbok-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .regelbok-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.45rem;
+      padding: 0.75rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .regel-card {
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.7rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--bg-secondary);
+      position: relative;
+    }
+    .regel-card:hover {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+    .regel-card.inserted {
+      border-color: #22c55e;
+      background: rgba(34,197,94,0.08);
+    }
+    .regel-navn {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+    }
+    .regel-formel {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 1.05rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .regel-formel sup { font-size: 0.6em; vertical-align: super; line-height: 0; }
+    .regel-formel sub { font-size: 0.6em; vertical-align: sub;   line-height: 0; }
+    .regel-hint {
+      font-size: 0.65rem;
+      color: var(--accent);
+      margin-top: 0.3rem;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .regel-card:hover .regel-hint { opacity: 1; }
+    #fs-nav button:hover { background: var(--bg-tertiary); }
+
+    /* ============================
+       KONTEKSTMENY
+       ============================ */
+    #context-menu {
+      position: fixed;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 200;
+      min-width: 150px;
+      padding: 0.25rem;
+    }
+    #context-menu.hidden { display: none; }
+    .ctx-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.42rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+    .ctx-item:hover { background: var(--bg-tertiary); }
+    .ctx-item.danger:hover { background: #fee2e2; color: #dc2626; }
+    .ctx-sep { height: 1px; background: var(--border-color); margin: 0.2rem 0; }
+
+    /* Blink-animasjon for å bekrefte kopier */
+    @keyframes confirmFlash {
+      0%,100% { box-shadow: 0 0 0 3px var(--accent); }
+      50%      { box-shadow: 0 0 0 5px #22c55e; }
+    }
+    .canvas-item.confirm-flash { animation: confirmFlash 0.4s ease; }
+
+    /* ============================
+       TEGNEVERKTØY
+       ============================ */
+    /* Rubber-band markering */
+    #rubber-band-el {
+      position: absolute;
+      border: 1.5px dashed var(--accent);
+      background: rgba(59,130,246,0.07);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 5;
+      display: none;
+    }
+
+    /* Flere elementer valgt = sterkere skygge */
+    .canvas-item.selected { box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(59,130,246,0.25); }
+
+    #step-display.draw-mode,
+    #step-display.line-mode { cursor: crosshair !important; }
+    #step-display.draw-mode .canvas-item,
+    #step-display.line-mode .canvas-item { pointer-events: none; }
+
+    /* Linje-forhåndsvisning: stiplet mens man drar */
+    #draw-overlay .line-preview { stroke-dasharray: 6 4; }
+
+    #draw-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .stroke-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.2rem;
+      height: 2.2rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.4rem;
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .stroke-btn:hover  { background: var(--accent); border-color: var(--accent); }
+    .stroke-btn.active { background: var(--accent); border-color: var(--accent); }
+    .stroke-btn svg    { pointer-events: none; }
+
+    /* Hurtigtasthint */
+    .shortcut-bar {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      padding: 0.3rem 1rem;
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    .shortcut-bar kbd {
+      display: inline-block;
+      padding: 0.05rem 0.3rem;
+      font-size: 0.65rem;
+      font-family: monospace;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- VERKTØYLINJE -->
+    <header id="toolbar">
+      <div class="toolbar-group">
+        <button class="tb-btn" onclick="addItem('operator','+')" title="Pluss">+</button>
+        <button class="tb-btn" onclick="addItem('operator','−')" title="Minus">−</button>
+        <button class="tb-btn" onclick="addItem('operator','×')" title="Gange">×</button>
+        <button class="tb-btn" onclick="addItem('operator','÷')" title="Dele">÷</button>
+        <button class="tb-btn" onclick="addItem('operator','=')" title="Er lik">=</button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group">
+        <button class="tb-btn tb-btn-sm" id="frac-toolbar-btn" onclick="openFracPopoverFromBtn(this)">⅟ Brøk</button>
+        <button class="tb-btn" onclick="addItem('operator','%')">%</button>
+        <button class="tb-btn tb-btn-sm" onclick="addItem('currency','kr')">kr</button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group" id="color-buttons">
+        <button class="color-btn active" data-color="" style="background:var(--text-primary)" onclick="setColor(null)"></button>
+        <button class="color-btn" data-color="red" style="background:#ef4444" onclick="setColor('red')"></button>
+        <button class="color-btn" data-color="blue" style="background:#3b82f6" onclick="setColor('blue')"></button>
+        <button class="color-btn" data-color="green" style="background:#22c55e" onclick="setColor('green')"></button>
+        <button class="color-btn" data-color="orange" style="background:#f97316" onclick="setColor('orange')"></button>
+        <button class="color-btn" data-color="purple" style="background:#a855f7" onclick="setColor('purple')"></button>
+        <button class="color-btn" data-color="pink" style="background:#ec4899" onclick="setColor('pink')"></button>
+        <button class="color-btn" data-color="brown" style="background:#92400e" onclick="setColor('brown')"></button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group">
+        <button class="tb-btn tb-btn-sm" id="emoji-toggle" onclick="toggleEmojiPanel()">😀 Emoji</button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group">
+        <button class="tb-btn tb-btn-sm" id="arrows-toggle" onclick="toggleArrowsPanel()">→ Piler</button>
+        <button class="tb-btn tb-btn-sm" id="math-toggle" onclick="toggleMathPanel()">∑ Matte</button>
+        <button class="tb-btn tb-btn-sm" id="regelbok-toggle" onclick="toggleRegelbok()">📖 Regelbok</button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group" id="draw-group">
+        <button class="tb-btn tb-btn-sm" id="draw-toggle" onclick="toggleDrawMode()" title="Frihåndstegning (D)">✏️ Tegn</button>
+        <button class="tb-btn tb-btn-sm" id="line-toggle" onclick="toggleLineMode()" title="Rett linje (L)">╱ Linje</button>
+        <button class="stroke-btn active" id="sw-thin"   onclick="setStrokeWidth(2)"  title="Tynn">
+          <svg width="22" height="14"><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="stroke-btn" id="sw-med"    onclick="setStrokeWidth(4)"  title="Medium">
+          <svg width="22" height="14"><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="stroke-btn" id="sw-thick"  onclick="setStrokeWidth(8)"  title="Tykk">
+          <svg width="22" height="14"><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group">
+        <button class="tb-btn" onclick="prevStep()">◀</button>
+        <span id="step-counter" style="font-size:0.8rem;min-width:2.5rem;text-align:center;color:var(--text-secondary)">1/1</span>
+        <button class="tb-btn" onclick="nextStep()">▶</button>
+      </div>
+      <div class="toolbar-separator"></div>
+      <div class="toolbar-group">
+        <button class="tb-btn tb-btn-sm" onclick="undo()">↩ Angre</button>
+        <button class="tb-btn tb-btn-sm" onclick="redo()">↪ Gjør om</button>
+        <button class="tb-btn tb-btn-sm" onclick="toggleTheme()" id="theme-btn">🌙</button>
+        <button class="tb-btn tb-btn-sm" onclick="toggleFullscreen()">⛶</button>
+        <button class="tb-btn tb-btn-sm" onclick="clearAll()">🗑</button>
+      </div>
+    </header>
+
+    <!-- HOVEDINNHOLD -->
+    <div id="main-layout">
+      <section id="canvas">
+        <div id="step-display" tabindex="-1" style="outline:none">
+          <div class="empty-hint" id="empty-hint">Klikk for hurtigmeny · Dobbeltklikk for å skrive · ✏️ Tegn for frihånd</div>
+          <!-- tabindex slik at canvas kan motta tastaturhendelser etter klikk på element -->
+
+          <svg id="draw-overlay"></svg>
+          <div id="rubber-band-el"></div>
+          <div id="zoom-control">
+            <button onclick="zoomOut()" title="Forminsk">−</button>
+            <span id="zoom-label" onclick="resetZoom()" title="Klikk for å nullstille">100%</span>
+            <button onclick="zoomIn()" title="Forstørr">+</button>
+          </div>
+        </div>
+        <div class="shortcut-bar">
+          <span><kbd>Enter</kbd> Legg til</span>
+          <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> Nytt steg</span>
+          <span><kbd>←</kbd><kbd>→</kbd> Steg</span>
+          <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> Angre</span>
+          <span><kbd>Del</kbd> Slett valgt</span>
+          <span><kbd>Ctrl</kbd>+<kbd>C/X/V</kbd> Kopier/Klipp/Lim</span>
+          <span><kbd>B</kbd> Brøk</span>
+          <span>Klikk tomt felt for hurtigmeny</span>
+          <span>Dra blå prikk for å endre størrelse</span>
+        </div>
+        <div id="input-zone">
+          <div class="input-color-bar" id="input-color-bar"></div>
+          <input type="text" id="math-input" placeholder="Skriv tall, tekst eller operator... Enter for å legge til" autocomplete="off" spellcheck="false">
+          <button class="tb-btn tb-btn-sm" onclick="addFromInput()">Legg til</button>
+        </div>
+      </section>
+
+      <aside id="step-panel">
+        <div class="step-panel-header">Steg</div>
+        <div class="step-list" id="step-list"></div>
+        <div class="step-panel-footer">
+          <button onclick="addStep()">+ Nytt</button>
+          <button onclick="duplicateStep()">⧉ Dupliser</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- FULLSKJERM-NAV -->
+    <div id="fs-nav">
+      <button onclick="prevStep()">◀</button>
+      <span id="fs-step-counter">1/1</span>
+      <button onclick="nextStep()">▶</button>
+      <button onclick="toggleFullscreen()">✕</button>
+    </div>
+
+    <!-- BRØK-POPOVER (inline, erstatter modal) -->
+    <div id="frac-popover" class="frac-popover hidden">
+      <div class="frac-pop-label">⅟ Brøk</div>
+      <div class="frac-pop-row">
+        <input id="frac-pop-num" class="frac-pop-input" placeholder="Teller" autocomplete="off" spellcheck="false">
+        <div class="frac-pop-divider"></div>
+        <input id="frac-pop-den" class="frac-pop-input" placeholder="Nevner" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="frac-pop-preview" class="frac-pop-preview"></div>
+      <div class="frac-pop-footer">
+        <button onclick="closeFracPopover()">Avbryt</button>
+        <button class="fp-ok" onclick="insertFracFromPopover()">↵ Sett inn</button>
+      </div>
+    </div>
+
+    <!-- EMOJI-PANEL -->
+    <div class="popup-panel hidden" id="emoji-panel"></div>
+    <!-- PILER-PANEL -->
+    <div class="popup-panel hidden" id="arrows-panel"></div>
+    <!-- MATTE-PANEL -->
+    <div class="popup-panel hidden" id="math-panel"></div>
+    <!-- HURTIGMENY -->
+    <div class="quick-menu hidden" id="quick-menu"></div>
+    <!-- KONTEKSTMENY -->
+    <div id="context-menu" class="hidden"></div>
+
+    <!-- REGELBOK -->
+    <div id="regelbok-panel" class="hidden">
+      <div class="regelbok-header">
+        <span>📖 Regelbok</span>
+        <button onclick="closeRegelbok()" title="Lukk">✕</button>
+      </div>
+      <div class="regelbok-tabs" id="regelbok-tabs"></div>
+      <div class="regelbok-grid" id="regelbok-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE — hvert token har nå x,y for fri plassering
+    // ============================================================
+    let state = {
+      steps: [{ id: uid(), tokens: [] }],
+      activeStepIndex: 0,
+      selectedTokenIds: new Set(), // støtter multi-select
+      activeColor: null,
+      theme: localStorage.getItem('mattebyggeren-theme') || 'light',
+      undoStack: [],
+      redoStack: [],
+      nextPlaceX: 60,  // neste auto-plassering
+      nextPlaceY: 60
+    };
+
+    // Popover-state for brøk
+    let fracPopState = { numColor: null, denColor: null, editTokenId: null, canvasX: null, canvasY: null };
+
+    // Drag-state (støtter nå multi-drag)
+    let drag = { active: false, primaryId: null, initPositions: {}, startClientX: 0, startClientY: 0, moved: false, undoSaved: false, cmdKey: false, canvasLeft: 0, canvasTop: 0 };
+
+    // Rubber-band (klikk-og-dra for å markere)
+    let rubberBand = { active: false, startX: 0, startY: 0, moved: false };
+
+    // Helper: siste valgte token-id (for kontekstmeny, copy o.l.)
+    function primarySelected() { return [...state.selectedTokenIds].at(-1) ?? null; }
+
+    // Resize-state (endre størrelse per token)
+    let resizeDrag = { active: false, id: null, el: null, startY: 0, startScale: 1 };
+
+    // Klippebord for kopier/klipp/lim
+    let clipboard = null;
+
+    // Tegneverktøy-state
+    let drawMode = false;
+    let strokeWidth = 2;
+    let currentStroke = { active: false, points: [], color: null };
+
+    function toggleDrawMode() {
+      drawMode = !drawMode;
+      const btn = document.getElementById('draw-toggle');
+      const display = document.getElementById('step-display');
+      btn.classList.toggle('active', drawMode);
+      display.classList.toggle('draw-mode', drawMode);
+    }
+
+    function setStrokeWidth(w) {
+      strokeWidth = w;
+      ['sw-thin','sw-med','sw-thick'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+      const map = { 2: 'sw-thin', 4: 'sw-med', 8: 'sw-thick' };
+      document.getElementById(map[w])?.classList.add('active');
+    }
+
+    // Konverterer punkter til glatt SVG-bane med kvadratiske bezier-kurver
+    function pointsToSvgPath(pts) {
+      if (pts.length < 2) return `M ${pts[0]?.x ?? 0} ${pts[0]?.y ?? 0}`;
+      let d = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i].x + pts[i+1].x) / 2;
+        const my = (pts[i].y + pts[i+1].y) / 2;
+        d += ` Q ${pts[i].x} ${pts[i].y} ${mx} ${my}`;
+      }
+      d += ` L ${pts[pts.length-1].x} ${pts[pts.length-1].y}`;
+      return d;
+    }
+
+    function startDraw(e) {
+      const rect = document.getElementById('step-display').getBoundingClientRect();
+      currentStroke.active = true;
+      currentStroke.color = state.activeColor;
+      currentStroke.points = [{ x: e.clientX - rect.left, y: e.clientY - rect.top }];
+      updateDrawOverlay();
+    }
+
+    function continueDraw(e) {
+      if (!currentStroke.active) return;
+      const rect = document.getElementById('step-display').getBoundingClientRect();
+      const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      // Bare legg til punkt om det har beveget seg nok (reduserer støy)
+      const last = currentStroke.points[currentStroke.points.length - 1];
+      const dx = pt.x - last.x, dy = pt.y - last.y;
+      if (dx*dx + dy*dy > 4) {
+        currentStroke.points.push(pt);
+        updateDrawOverlay();
+      }
+    }
+
+    function updateDrawOverlay() {
+      const overlay = document.getElementById('draw-overlay');
+      overlay.innerHTML = '';
+      if (!currentStroke.points.length) return;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pointsToSvgPath(currentStroke.points));
+      path.setAttribute('fill', 'none');
+      const COLORS_MAP = { red:'#ef4444', blue:'#3b82f6', green:'#22c55e', orange:'#f97316', purple:'#a855f7', pink:'#ec4899', brown:'#92400e' };
+      path.setAttribute('stroke', COLORS_MAP[currentStroke.color] || 'var(--text-primary)');
+      path.setAttribute('stroke-width', strokeWidth);
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      overlay.appendChild(path);
+    }
+
+    function endDraw() {
+      if (!currentStroke.active) return;
+      currentStroke.active = false;
+      // Rydd overlay
+      document.getElementById('draw-overlay').innerHTML = '';
+
+      const pts = currentStroke.points;
+      if (pts.length < 2) return;  // for kort til å lagre
+
+      // Finn bounding box med litt padding
+      const PAD = strokeWidth + 4;
+      const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+      const minX = Math.min(...xs) - PAD, minY = Math.min(...ys) - PAD;
+      const maxX = Math.max(...xs) + PAD, maxY = Math.max(...ys) + PAD;
+      const w = maxX - minX, h = maxY - minY;
+
+      // Konverter til koordinater relativt til bounding box
+      const relPts = pts.map(p => ({ x: p.x - minX, y: p.y - minY }));
+
+      saveUndo();
+      const token = {
+        id: uid(),
+        type: 'drawing',
+        x: minX, y: minY,
+        drawWidth: w, drawHeight: h,
+        points: relPts,
+        color: currentStroke.color,
+        strokeWidth,
+        scale: 1,
+      };
+      step().tokens.push(token);
+      render();
+    }
+
+    function uid() { return Math.random().toString(36).substr(2, 9); }
+    function step() { return state.steps[state.activeStepIndex]; }
+
+    function saveUndo() {
+      state.undoStack.push(JSON.parse(JSON.stringify({ steps: state.steps, activeStepIndex: state.activeStepIndex })));
+      state.redoStack = [];
+      if (state.undoStack.length > 50) state.undoStack.shift();
+    }
+
+    // ============================================================
+    // TOKEN-FACTORY — alle tokens har x, y
+    // ============================================================
+    function makeToken(type, value, opts = {}) {
+      const canvas = document.getElementById('step-display');
+      const rect = canvas.getBoundingClientRect();
+
+      // Auto-plassering: horisontalt med wrap
+      let x = opts.x ?? state.nextPlaceX;
+      let y = opts.y ?? state.nextPlaceY;
+
+      // Flytt neste plassering til høyre — kompenser for zoom så elementer ikke overlapper
+      const baseWidth = type === 'banknote' ? 140 : type === 'coin' ? 90 : type === 'fraction' ? 120 : 80;
+      const stepWidth = baseWidth * zoomLevel;
+      state.nextPlaceX = x + stepWidth;
+      if (state.nextPlaceX > rect.width - 100) {
+        state.nextPlaceX = 60;
+        state.nextPlaceY += 100;
+      }
+
+      return {
+        id: uid(),
+        type,
+        value,
+        color: opts.color !== undefined ? opts.color : state.activeColor,
+        x, y,
+        scale: opts.scale || 1,
+        numerator: opts.numerator || null,
+        denominator: opts.denominator || null
+      };
+    }
+
+    // ============================================================
+    // ACTIONS
+    // ============================================================
+    function addItem(type, value, opts = {}) {
+      saveUndo();
+      const token = makeToken(type, value, opts);
+      step().tokens.push(token);
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    function removeItem(id) {
+      saveUndo();
+      const s = step();
+      s.tokens = s.tokens.filter(t => t.id !== id);
+      state.selectedTokenIds.delete(id);
+      render();
+    }
+
+    function colorItem(id, color) {
+      saveUndo();
+      const t = step().tokens.find(t => t.id === id);
+      if (t) t.color = color;
+      render();
+    }
+
+    function addStep() {
+      saveUndo();
+      state.steps.push({ id: uid(), tokens: [] });
+      state.activeStepIndex = state.steps.length - 1;
+      state.selectedTokenIds.clear();
+      resetPlacement();
+      render();
+      focusInput();
+    }
+
+    function duplicateStep() {
+      saveUndo();
+      const copy = JSON.parse(JSON.stringify(step()));
+      copy.id = uid();
+      copy.tokens.forEach(t => t.id = uid());
+      state.steps.splice(state.activeStepIndex + 1, 0, copy);
+      state.activeStepIndex += 1;
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    function deleteStep(idx) {
+      if (state.steps.length <= 1) return;
+      saveUndo();
+      state.steps.splice(idx, 1);
+      state.activeStepIndex = Math.min(state.activeStepIndex, state.steps.length - 1);
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    function setActiveStep(idx) {
+      if (idx < 0 || idx >= state.steps.length) return;
+      state.activeStepIndex = idx;
+      state.selectedTokenIds.clear();
+      resetPlacement();
+      render();
+    }
+
+    function prevStep() { setActiveStep(state.activeStepIndex - 1); }
+    function nextStep() { setActiveStep(state.activeStepIndex + 1); }
+
+    function clearAll() {
+      if (!confirm('Tømme alt?')) return;
+      saveUndo();
+      state.steps = [{ id: uid(), tokens: [] }];
+      state.activeStepIndex = 0;
+      state.selectedTokenIds.clear();
+      resetPlacement();
+      render();
+    }
+
+    function resetPlacement() {
+      state.nextPlaceX = 60;
+      state.nextPlaceY = 60;
+    }
+
+    // ============================================================
+    // UNDO / REDO
+    // ============================================================
+    function undo() {
+      if (!state.undoStack.length) return;
+      state.redoStack.push(JSON.parse(JSON.stringify({ steps: state.steps, activeStepIndex: state.activeStepIndex })));
+      const prev = state.undoStack.pop();
+      state.steps = prev.steps;
+      state.activeStepIndex = prev.activeStepIndex;
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    function redo() {
+      if (!state.redoStack.length) return;
+      state.undoStack.push(JSON.parse(JSON.stringify({ steps: state.steps, activeStepIndex: state.activeStepIndex })));
+      const next = state.redoStack.pop();
+      state.steps = next.steps;
+      state.activeStepIndex = next.activeStepIndex;
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    // ============================================================
+    // FARGER
+    // ============================================================
+    const COLORS = [
+      { name: null, hex: null }, { name: 'red', hex: '#ef4444' }, { name: 'blue', hex: '#3b82f6' },
+      { name: 'green', hex: '#22c55e' }, { name: 'orange', hex: '#f97316' },
+      { name: 'purple', hex: '#a855f7' }, { name: 'pink', hex: '#ec4899' }, { name: 'brown', hex: '#92400e' }
+    ];
+
+    function setColor(color) {
+      if (state.selectedTokenIds.size > 0) {
+        saveUndo();
+        state.selectedTokenIds.forEach(id => {
+          const t = step().tokens.find(t => t.id === id);
+          if (t) t.color = color;
+        });
+        state.selectedTokenIds.clear();
+      }
+      state.activeColor = color;
+      updateColorUI();
+    }
+
+    function updateColorUI() {
+      document.querySelectorAll('#color-buttons .color-btn').forEach(b => {
+        b.classList.toggle('active', (b.dataset.color || null) === (state.activeColor || ''));
+      });
+      const bar = document.getElementById('input-color-bar');
+      const c = COLORS.find(c => c.name === state.activeColor);
+      bar.style.background = c?.hex || 'var(--border-color)';
+    }
+
+    // ============================================================
+    // INPUT
+    // ============================================================
+    function addFromInput() {
+      const input = document.getElementById('math-input');
+      const val = input.value.trim();
+      if (!val) return;
+
+      // Auto-detekter brøk: "3/4" eller "2/3" → brøk-token
+      const fracMatch = val.match(/^(-?\d+(?:[.,]\d*)?)\s*\/\s*(-?\d+(?:[.,]\d*)?)$/);
+      if (fracMatch) {
+        saveUndo();
+        const token = makeToken('fraction', null, {
+          numerator:   [{ value: fracMatch[1], color: state.activeColor }],
+          denominator: [{ value: fracMatch[2], color: state.activeColor }]
+        });
+        step().tokens.push(token);
+        state.selectedTokenIds.clear();
+        render();
+        input.value = '';
+        input.focus();
+        return;
+      }
+
+      const ops = { '+': '+', '-': '−', '*': '×', 'x': '×', '/': '÷', '=': '=', '%': '%' };
+      if (ops[val]) addItem('operator', ops[val]);
+      else if (/^[\d.,\s]+$/.test(val)) addItem('number', val);
+      else if (val.toLowerCase() === 'kr') addItem('currency', 'kr');
+      else addItem('text', val);
+      input.value = '';
+      input.focus();
+    }
+
+    function focusInput() { setTimeout(() => document.getElementById('math-input')?.focus(), 50); }
+
+    // ============================================================
+    // BRØK-POPOVER (inline flytevindu, erstatter modal)
+    // ============================================================
+    function openFracPopover(clientX, clientY, canvasX, canvasY) {
+      fracPopState.numColor = state.activeColor;
+      fracPopState.denColor = state.activeColor;
+      fracPopState.editTokenId = null;
+      fracPopState.canvasX = canvasX;
+      fracPopState.canvasY = canvasY;
+
+      const pop = document.getElementById('frac-popover');
+      document.getElementById('frac-pop-num').value = '';
+      document.getElementById('frac-pop-den').value = '';
+      updateFracPopPreview();
+
+      // Posisjon: under klikk-punkt, innenfor viewport
+      pop.classList.remove('hidden');
+      const pw = 198, ph = 180;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      pop.style.left = Math.max(8, Math.min(clientX, vw - pw - 8)) + 'px';
+      pop.style.top  = Math.max(8, Math.min(clientY + 8, vh - ph - 8)) + 'px';
+
+      setTimeout(() => document.getElementById('frac-pop-num').focus(), 30);
+    }
+
+    function openFracPopoverFromBtn(btn) {
+      const r = btn.getBoundingClientRect();
+      openFracPopover(r.left, r.bottom + 4, null, null);
+    }
+
+    function openFracPopoverEdit(token) {
+      fracPopState.editTokenId = token.id;
+      fracPopState.numColor = token.numerator?.[0]?.color ?? null;
+      fracPopState.denColor = token.denominator?.[0]?.color ?? null;
+      fracPopState.canvasX = token.x;
+      fracPopState.canvasY = token.y;
+
+      document.getElementById('frac-pop-num').value = token.numerator?.[0]?.value ?? '';
+      document.getElementById('frac-pop-den').value = token.denominator?.[0]?.value ?? '';
+      updateFracPopPreview();
+
+      // Plasser ved siden av elementet
+      const el = document.querySelector(`[data-token-id="${token.id}"]`);
+      let cx = 200, cy = 200;
+      if (el) { const r = el.getBoundingClientRect(); cx = r.right + 10; cy = r.top; }
+      const pw = 198, ph = 180;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const pop = document.getElementById('frac-popover');
+      pop.style.left = Math.max(8, Math.min(cx, vw - pw - 8)) + 'px';
+      pop.style.top  = Math.max(8, Math.min(cy, vh - ph - 8)) + 'px';
+      pop.classList.remove('hidden');
+
+      setTimeout(() => document.getElementById('frac-pop-num').focus(), 30);
+    }
+
+    function closeFracPopover() {
+      document.getElementById('frac-popover').classList.add('hidden');
+      fracPopState.editTokenId = null;
+    }
+
+    function updateFracPopPreview() {
+      const n = document.getElementById('frac-pop-num')?.value || '?';
+      const d = document.getElementById('frac-pop-den')?.value || '?';
+      document.getElementById('frac-pop-preview').innerHTML =
+        `<div class="item-fraction" style="font-size:1.6rem"><span class="frac-num">${esc(n)}</span><span class="frac-line" style="height:2px;background:var(--text-primary);width:100%;min-width:1em;display:block"></span><span class="frac-den">${esc(d)}</span></div>`;
+    }
+
+    function insertFracFromPopover() {
+      const n = document.getElementById('frac-pop-num').value.trim();
+      const d = document.getElementById('frac-pop-den').value.trim();
+      if (!n) { document.getElementById('frac-pop-num').focus(); return; }
+      if (!d) { document.getElementById('frac-pop-den').focus(); return; }
+      saveUndo();
+
+      if (fracPopState.editTokenId) {
+        const token = step().tokens.find(t => t.id === fracPopState.editTokenId);
+        if (token) {
+          token.numerator   = [{ value: n, color: fracPopState.numColor }];
+          token.denominator = [{ value: d, color: fracPopState.denColor }];
+        }
+        fracPopState.editTokenId = null;
+      } else {
+        const opts = {};
+        if (fracPopState.canvasX !== null) { opts.x = fracPopState.canvasX; opts.y = fracPopState.canvasY; }
+        const token = makeToken('fraction', null, {
+          ...opts,
+          numerator:   [{ value: n, color: fracPopState.numColor }],
+          denominator: [{ value: d, color: fracPopState.denColor }]
+        });
+        step().tokens.push(token);
+      }
+
+      closeFracPopover();
+      render();
+      focusInput();
+    }
+
+    // ============================================================
+    // EMOJI / SEDLER / MYNTER PANEL
+    // ============================================================
+    const EMOJIS = {
+      'Personer': ['👤','👧','👦','👨','👩','👶','🧑‍🏫','👨‍👩‍👧'],
+      'Penger': ['💰','💵','🪙','💳','💲'],
+      'Mat': ['🍎','🍌','🍕','🍪','🧁','🍫'],
+      'Objekter': ['⭐','❤️','🚗','🏠','📚','✏️','🎾','🎲'],
+      'Figurer': ['🔴','🔵','🟢','🟡','🟠','🟣','⬛','⬜']
+    };
+
+    const SEDLER = [
+      { v: 50, css: 's50' }, { v: 100, css: 's100' }, { v: 200, css: 's200' },
+      { v: 500, css: 's500' }, { v: 1000, css: 's1000' }
+    ];
+
+    const MYNTER = [1, 5, 10, 20];
+
+    function toggleEmojiPanel() {
+      const panel = document.getElementById('emoji-panel');
+      const btn = document.getElementById('emoji-toggle');
+      if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+
+      const r = btn.getBoundingClientRect();
+      panel.style.top = (r.bottom + 6) + 'px';
+      panel.style.left = Math.max(6, r.left - 80) + 'px';
+      panel.innerHTML = '';
+
+      // Sedler
+      addCatTitle(panel, 'Norske sedler');
+      const sg = addGrid(panel);
+      SEDLER.forEach(s => {
+        const b = document.createElement('button');
+        b.className = `emoji-btn sedler-btn ${s.css}`;
+        b.textContent = s.v + ' kr';
+        b.onclick = (e) => { e.stopPropagation(); addItem('banknote', String(s.v)); };
+        sg.appendChild(b);
+      });
+
+      // Mynter
+      addCatTitle(panel, 'Norske mynter');
+      const mg = addGrid(panel);
+      MYNTER.forEach(v => {
+        const b = document.createElement('button');
+        b.className = 'emoji-btn mynt-btn';
+        b.textContent = v;
+        b.onclick = (e) => { e.stopPropagation(); addItem('coin', String(v)); };
+        mg.appendChild(b);
+      });
+
+      // Emoji-kategorier
+      for (const [cat, list] of Object.entries(EMOJIS)) {
+        addCatTitle(panel, cat);
+        const g = addGrid(panel);
+        list.forEach(em => {
+          const b = document.createElement('button');
+          b.className = 'emoji-btn';
+          b.textContent = em;
+          b.onclick = (e) => { e.stopPropagation(); addItem('emoji', em); };
+          g.appendChild(b);
+        });
+      }
+
+      panel.classList.remove('hidden');
+    }
+
+    function addCatTitle(parent, text) {
+      const t = document.createElement('div');
+      t.className = 'emoji-cat-title';
+      t.textContent = text;
+      parent.appendChild(t);
+    }
+    function addGrid(parent) {
+      const g = document.createElement('div');
+      g.className = 'emoji-grid';
+      parent.appendChild(g);
+      return g;
+    }
+
+    // Lukk panels ved klikk utenfor
+    document.addEventListener('click', (e) => {
+      [
+        ['emoji-panel', 'emoji-toggle'],
+        ['arrows-panel', 'arrows-toggle'],
+        ['math-panel', 'math-toggle'],
+      ].forEach(([panelId, btnId]) => {
+        const panel = document.getElementById(panelId);
+        const btn   = document.getElementById(btnId);
+        if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+          panel.classList.add('hidden');
+        }
+      });
+    });
+
+    // ============================================================
+    // RENDERING — fritt plasserte elementer
+    // ============================================================
+    function render() {
+      document.documentElement.setAttribute('data-theme', state.theme);
+      document.getElementById('theme-btn').textContent = state.theme === 'light' ? '🌙' : '☀️';
+      renderCanvas();
+      renderStepPanel();
+      const c = `${state.activeStepIndex + 1}/${state.steps.length}`;
+      document.getElementById('step-counter').textContent = c;
+      document.getElementById('fs-step-counter').textContent = c;
+      updateColorUI();
+    }
+
+    function renderCanvas() {
+      const display = document.getElementById('step-display');
+      // Fjern alt unntatt hint og bakgrunn
+      display.querySelectorAll('.canvas-item').forEach(el => el.remove());
+
+      const hint = document.getElementById('empty-hint');
+      const tokens = step().tokens;
+      hint.style.display = tokens.length === 0 ? 'block' : 'none';
+
+      tokens.forEach(token => {
+        const el = buildElement(token);
+        el.style.left = token.x + 'px';
+        el.style.top = token.y + 'px';
+        if (state.selectedTokenIds.has(token.id)) el.classList.add('selected');
+        display.appendChild(el);
+      });
+
+      applyZoom();
+    }
+
+    function buildElement(token) {
+      const wrap = document.createElement('div');
+      wrap.className = 'canvas-item';
+      wrap.dataset.tokenId = token.id;
+
+      // Mousedown for drag og select
+      wrap.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('resize-handle')) return;
+        startDrag(e, token.id, wrap);
+      });
+
+      // Dobbeltklikk = rediger token
+      wrap.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (token.type === 'fraction') { openFractionModalEdit(token); return; }
+        if (['number','text','currency','operator'].includes(token.type)) startInlineEdit(token, wrap);
+      });
+
+      // Høyreklikk = kontekstmeny
+      wrap.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!state.selectedTokenIds.has(token.id)) {
+          state.selectedTokenIds.clear();
+          state.selectedTokenIds.add(token.id);
+        }
+        render();
+        showContextMenu(e.clientX, e.clientY, token);
+      });
+
+      switch (token.type) {
+        case 'number':
+        case 'text':
+        case 'currency': {
+          const span = document.createElement('span');
+          span.className = `item-${token.type}`;
+          if (token.color) span.setAttribute('data-color', token.color);
+          span.innerHTML = parseMathValue(token.value);
+          wrap.appendChild(span);
+          break;
+        }
+        case 'operator': {
+          const span = document.createElement('span');
+          span.className = 'item-operator';
+          if (token.color) span.setAttribute('data-color', token.color);
+          span.innerHTML = parseMathValue(token.value);
+          wrap.appendChild(span);
+          break;
+        }
+        case 'emoji': {
+          const span = document.createElement('span');
+          span.className = 'item-emoji';
+          span.textContent = token.value;
+          wrap.appendChild(span);
+          break;
+        }
+        case 'fraction': {
+          const frac = document.createElement('div');
+          frac.className = 'item-fraction';
+
+          const num = document.createElement('span');
+          num.className = 'frac-num';
+          if (token.numerator?.[0]) {
+            if (token.numerator[0].color) num.setAttribute('data-color', token.numerator[0].color);
+            num.innerHTML = parseMathValue(token.numerator[0].value);
+          }
+
+          const line = document.createElement('span');
+          line.className = 'frac-line';
+
+          const den = document.createElement('span');
+          den.className = 'frac-den';
+          if (token.denominator?.[0]) {
+            if (token.denominator[0].color) den.setAttribute('data-color', token.denominator[0].color);
+            den.innerHTML = parseMathValue(token.denominator[0].value);
+          }
+
+          frac.append(num, line, den);
+          wrap.appendChild(frac);
+          break;
+        }
+        case 'banknote': {
+          // Ekte bilder for 50, 100, 200 — fallback for 500, 1000
+          const imgMap = { '50': 'sedler/50kr.jpeg', '100': 'sedler/100kr.jpg', '200': 'sedler/200kr.jpg', '500': 'sedler/500kr.jpg', '1000': 'sedler/1000kr.jpg' };
+          if (imgMap[token.value]) {
+            const note = document.createElement('div');
+            note.className = 'item-banknote';
+            const img = document.createElement('img');
+            img.src = imgMap[token.value];
+            img.alt = token.value + ' kr';
+            img.draggable = false;
+            note.appendChild(img);
+            wrap.appendChild(note);
+          } else {
+            const note = document.createElement('div');
+            note.className = `item-banknote-fallback item-banknote-${token.value}`;
+            note.textContent = `${token.value} kr`;
+            wrap.appendChild(note);
+          }
+          break;
+        }
+        case 'coin': {
+          const coin = document.createElement('div');
+          coin.className = 'item-coin';
+          coin.textContent = `${token.value}`;
+          wrap.appendChild(coin);
+          break;
+        }
+        case 'line': {
+          const stroke = COLORS_MAP_LINE[token.color] || 'var(--text-primary)';
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('width',  token.drawWidth);
+          svg.setAttribute('height', token.drawHeight);
+          svg.style.cssText = 'display:block;overflow:visible;';
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', token.x1); line.setAttribute('y1', token.y1);
+          line.setAttribute('x2', token.x2); line.setAttribute('y2', token.y2);
+          line.setAttribute('stroke', stroke);
+          line.setAttribute('stroke-width', token.strokeWidth || 3);
+          line.setAttribute('stroke-linecap', 'round');
+          svg.appendChild(line);
+          wrap.appendChild(svg);
+          break;
+        }
+        case 'drawing': {
+          const COLORS_MAP = { red:'#ef4444', blue:'#3b82f6', green:'#22c55e', orange:'#f97316', purple:'#a855f7', pink:'#ec4899', brown:'#92400e' };
+          const stroke = COLORS_MAP[token.color] || 'var(--text-primary)';
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('width',  token.drawWidth);
+          svg.setAttribute('height', token.drawHeight);
+          svg.style.display = 'block';
+          svg.style.overflow = 'visible';
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', pointsToSvgPath(token.points));
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', stroke);
+          path.setAttribute('stroke-width', token.strokeWidth || 3);
+          path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linejoin', 'round');
+          svg.appendChild(path);
+          wrap.appendChild(svg);
+          break;
+        }
+      }
+
+      // Resize-handle
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle';
+      handle.title = 'Dra for å endre størrelse';
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizeDrag.active = true;
+        resizeDrag.id = token.id;
+        resizeDrag.el = wrap;
+        resizeDrag.startY = e.clientY;
+        resizeDrag.startScale = token.scale || 1;
+      });
+      wrap.appendChild(handle);
+
+      return wrap;
+    }
+
+    // ============================================================
+    // DRAG-SYSTEM
+    // ============================================================
+    function startDrag(e, tokenId, el) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Hvis token ikke allerede er markert, erstatt markering.
+      // Bruker IKKE render() her — det ville destroyer DOM-noder og
+      // fjerne dblclick-listenere før dobbeltklikket rekker å fyre.
+      if (!state.selectedTokenIds.has(tokenId)) {
+        state.selectedTokenIds.clear();
+        state.selectedTokenIds.add(tokenId);
+        document.querySelectorAll('.canvas-item').forEach(el => {
+          el.classList.toggle('selected', state.selectedTokenIds.has(el.dataset.tokenId));
+        });
+        updateColorUI();
+      }
+
+      const canvasRect = document.getElementById('step-display').getBoundingClientRect();
+      drag.active       = true;
+      drag.primaryId    = tokenId;
+      drag.startClientX = e.clientX;
+      drag.startClientY = e.clientY;
+      drag.moved        = false;
+      drag.undoSaved    = false;
+      drag.cmdKey       = e.metaKey || e.ctrlKey;
+      drag.canvasLeft   = canvasRect.left;
+      drag.canvasTop    = canvasRect.top;
+
+      // Snapshot startposisjon for ALLE valgte tokens
+      drag.initPositions = {};
+      state.selectedTokenIds.forEach(id => {
+        const t = step().tokens.find(t => t.id === id);
+        if (t) drag.initPositions[id] = { x: t.x, y: t.y };
+      });
+
+      el.classList.add('dragging');
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (!drag.active) return;
+      e.preventDefault();
+
+      if (!drag.undoSaved) { saveUndo(); drag.undoSaved = true; }
+
+      const dx = e.clientX - drag.startClientX;
+      const dy = e.clientY - drag.startClientY;
+      drag.moved = true;
+
+      // Flytt ALLE valgte tokens med samme delta
+      state.selectedTokenIds.forEach(id => {
+        const init = drag.initPositions[id];
+        if (!init) return;
+        const token = step().tokens.find(t => t.id === id);
+        if (!token) return;
+        token.x = Math.max(0, init.x + dx);
+        token.y = Math.max(0, init.y + dy);
+        const el = document.querySelector(`[data-token-id="${id}"]`);
+        if (el) { el.style.left = token.x + 'px'; el.style.top = token.y + 'px'; }
+      });
+    });
+
+    // Tegne-drag og linje-drag
+    document.addEventListener('mousemove', (e) => {
+      if (drawMode && currentStroke.active) { continueDraw(e); return; }
+      if (lineMode && lineDraw.active) {
+        const rect = document.getElementById('step-display').getBoundingClientRect();
+        updateLineOverlay(e.clientX - rect.left, e.clientY - rect.top, e.shiftKey);
+        return;
+      }
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (drawMode && currentStroke.active) { endDraw(); return; }
+      if (lineMode && lineDraw.active) { endLine(e); return; }
+    });
+
+    // Rubber band mousemove
+    document.addEventListener('mousemove', (e) => {
+      if (!rubberBand.active || drag.active) return;
+      const display = document.getElementById('step-display');
+      const rect = display.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const dx = Math.abs(cx - rubberBand.startX);
+      const dy = Math.abs(cy - rubberBand.startY);
+      if (dx > 4 || dy > 4) {
+        rubberBand.moved = true;
+        const rbEl = document.getElementById('rubber-band-el');
+        rbEl.style.display = 'block';
+        rbEl.style.left   = Math.min(cx, rubberBand.startX) + 'px';
+        rbEl.style.top    = Math.min(cy, rubberBand.startY) + 'px';
+        rbEl.style.width  = dx + 'px';
+        rbEl.style.height = dy + 'px';
+      }
+    });
+
+    // Rubber band mouseup
+    document.addEventListener('mouseup', (e) => {
+      if (!rubberBand.active) return;
+      rubberBand.active = false;
+      document.getElementById('rubber-band-el').style.display = 'none';
+
+      const display = document.getElementById('step-display');
+      const dispRect = display.getBoundingClientRect();
+
+      if (rubberBand.moved) {
+        // Marker alle tokens som overlapper med rubber band-rektangelet
+        const cx = e.clientX - dispRect.left;
+        const cy = e.clientY - dispRect.top;
+        const x1 = Math.min(rubberBand.startX, cx);
+        const y1 = Math.min(rubberBand.startY, cy);
+        const x2 = Math.max(rubberBand.startX, cx);
+        const y2 = Math.max(rubberBand.startY, cy);
+        step().tokens.forEach(t => {
+          const el = document.querySelector(`[data-token-id="${t.id}"]`);
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          const tx1 = r.left - dispRect.left, ty1 = r.top - dispRect.top;
+          const tx2 = r.right - dispRect.left, ty2 = r.bottom - dispRect.top;
+          if (tx2 >= x1 && tx1 <= x2 && ty2 >= y1 && ty1 <= y2) {
+            state.selectedTokenIds.add(t.id);
+          }
+        });
+        if (state.selectedTokenIds.size > 0) {
+          document.getElementById('math-input').blur();
+          document.getElementById('step-display').focus();
+        }
+        render();
+      } else {
+        // Vanlig klikk på bakgrunn → vis hurtigmeny
+        showQuickMenu(e.clientX, e.clientY, e.clientX - dispRect.left, e.clientY - dispRect.top);
+      }
+    });
+
+    // Resize drag
+    document.addEventListener('mousemove', (e) => {
+      if (!resizeDrag.active) return;
+      e.preventDefault();
+      const dy = resizeDrag.startY - e.clientY; // opp = større
+      const newScale = Math.max(0.3, Math.min(4, resizeDrag.startScale + dy * 0.01));
+      const token = step().tokens.find(t => t.id === resizeDrag.id);
+      if (token) {
+        token.scale = newScale;
+        resizeDrag.el.style.transform = `scale(${newScale * zoomLevel})`;
+        resizeDrag.el.style.transformOrigin = 'top left';
+      }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (resizeDrag.active) {
+        saveUndo();
+        resizeDrag.active = false;
+        resizeDrag.el = null;
+        resizeDrag.id = null;
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!drag.active) return;
+
+      document.querySelectorAll('.canvas-item.dragging').forEach(el => el.classList.remove('dragging'));
+
+      if (!drag.moved) {
+        handleItemClick(drag.primaryId, drag.cmdKey);
+      }
+
+      drag.active = false;
+      drag.primaryId = null;
+      drag.initPositions = {};
+    });
+
+    // Klikk/dra på canvas-bakgrunn
+    document.getElementById('step-display')?.addEventListener?.('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const onBackground = ['step-display','empty-hint','draw-overlay','rubber-band-el'].includes(e.target.id);
+
+      if (drawMode) { startDraw(e); return; }
+      if (lineMode) { startLine(e); return; }
+
+      if (onBackground) {
+        hideQuickMenu();
+        // Cmd/Ctrl+klikk på bakgrunn starter rubber band uten å fjerne eksisterende valg
+        if (!e.metaKey && !e.ctrlKey) {
+          state.selectedTokenIds.clear();
+          render();
+        }
+        const display = document.getElementById('step-display');
+        const rect = display.getBoundingClientRect();
+        rubberBand.active = true;
+        rubberBand.startX = e.clientX - rect.left;
+        rubberBand.startY = e.clientY - rect.top;
+        rubberBand.moved  = false;
+        const rbEl = document.getElementById('rubber-band-el');
+        rbEl.style.cssText = `display:none;left:${rubberBand.startX}px;top:${rubberBand.startY}px;width:0;height:0;`;
+      }
+    });
+
+    // ============================================================
+    // RETT LINJE
+    // ============================================================
+    let lineMode = false;
+    let lineDraw = { active: false, startX: 0, startY: 0 };
+
+    const COLORS_MAP_LINE = { red:'#ef4444', blue:'#3b82f6', green:'#22c55e', orange:'#f97316', purple:'#a855f7', pink:'#ec4899', brown:'#92400e' };
+
+    function toggleLineMode() {
+      lineMode = !lineMode;
+      if (lineMode && drawMode) toggleDrawMode(); // ikke begge på én gang
+      document.getElementById('line-toggle').classList.toggle('active', lineMode);
+      document.getElementById('step-display').classList.toggle('line-mode', lineMode);
+    }
+
+    function startLine(e) {
+      const rect = document.getElementById('step-display').getBoundingClientRect();
+      lineDraw.active = true;
+      lineDraw.startX = e.clientX - rect.left;
+      lineDraw.startY = e.clientY - rect.top;
+    }
+
+    // Snapper til 0°/45°/90° ved Shift-holdt
+    function snapAngle(sx, sy, ex, ey, snap) {
+      if (!snap) return { ex, ey };
+      const dx = ex - sx, dy = ey - sy;
+      const angle = Math.atan2(dy, dx);
+      const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+      const len = Math.hypot(dx, dy);
+      return { ex: sx + Math.cos(snapped) * len, ey: sy + Math.sin(snapped) * len };
+    }
+
+    function updateLineOverlay(ex, ey, snap) {
+      const { ex: fx, ey: fy } = snapAngle(lineDraw.startX, lineDraw.startY, ex, ey, snap);
+      const overlay = document.getElementById('draw-overlay');
+      overlay.innerHTML = '';
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', lineDraw.startX);
+      line.setAttribute('y1', lineDraw.startY);
+      line.setAttribute('x2', fx);
+      line.setAttribute('y2', fy);
+      line.setAttribute('stroke', COLORS_MAP_LINE[state.activeColor] || 'var(--text-primary)');
+      line.setAttribute('stroke-width', strokeWidth);
+      line.setAttribute('stroke-linecap', 'round');
+      line.classList.add('line-preview');
+      overlay.appendChild(line);
+    }
+
+    function endLine(e) {
+      if (!lineDraw.active) return;
+      lineDraw.active = false;
+      document.getElementById('draw-overlay').innerHTML = '';
+
+      const rect = document.getElementById('step-display').getBoundingClientRect();
+      let ex = e.clientX - rect.left;
+      let ey = e.clientY - rect.top;
+      ({ ex, ey } = snapAngle(lineDraw.startX, lineDraw.startY, ex, ey, e.shiftKey));
+
+      const len = Math.hypot(ex - lineDraw.startX, ey - lineDraw.startY);
+      if (len < 6) return; // for kort
+
+      const PAD = strokeWidth + 4;
+      const minX = Math.min(lineDraw.startX, ex) - PAD;
+      const minY = Math.min(lineDraw.startY, ey) - PAD;
+      const maxX = Math.max(lineDraw.startX, ex) + PAD;
+      const maxY = Math.max(lineDraw.startY, ey) + PAD;
+
+      saveUndo();
+      const token = {
+        id: uid(),
+        type: 'line',
+        x: minX, y: minY,
+        x1: lineDraw.startX - minX,
+        y1: lineDraw.startY - minY,
+        x2: ex - minX,
+        y2: ey - minY,
+        drawWidth:  maxX - minX,
+        drawHeight: maxY - minY,
+        color: state.activeColor,
+        strokeWidth,
+        scale: 1,
+      };
+      step().tokens.push(token);
+      render();
+    }
+
+    // ============================================================
+    // HURTIGMENY
+    // ============================================================
+    function showQuickMenu(clientX, clientY, canvasX, canvasY) {
+      const menu = document.getElementById('quick-menu');
+      menu.innerHTML = '';
+
+      const ops = [
+        { label: '123 Tall',   action: () => openCanvasInput(canvasX, canvasY, 'number') },
+        { label: 'Aa Tekst',   action: () => openCanvasInput(canvasX, canvasY, 'text') },
+        { label: '⅟ Brøk',    action: () => { hideQuickMenu(); openFracPopover(clientX, clientY + 30, canvasX, canvasY); } },
+        { label: '→ Pil',      action: () => { hideQuickMenu(); addItem('operator', '→', {x: canvasX, y: canvasY}); } },
+        { label: 'kr Penger',  action: () => { hideQuickMenu(); addItem('currency', 'kr', {x: canvasX, y: canvasY}); } },
+      ];
+      const mathOps = [
+        { label: '+', v: '+' }, { label: '−', v: '−' }, { label: '×', v: '×' },
+        { label: '÷', v: '÷' }, { label: '=', v: '=' }
+      ];
+
+      ops.forEach(o => {
+        const b = document.createElement('button');
+        b.className = 'qm-btn';
+        b.textContent = o.label;
+        b.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); o.action(); };
+        menu.appendChild(b);
+      });
+
+      const sep = document.createElement('div');
+      sep.className = 'qm-sep';
+      menu.appendChild(sep);
+
+      mathOps.forEach(o => {
+        const b = document.createElement('button');
+        b.className = 'qm-btn';
+        b.textContent = o.label;
+        b.onmousedown = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          hideQuickMenu();
+          addItem('operator', o.v, { x: canvasX, y: canvasY });
+        };
+        menu.appendChild(b);
+      });
+
+      // Plasser menyen nær klikk-punkt, innenfor viewport
+      menu.classList.remove('hidden');
+      const mw = 240, mh = 120;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      menu.style.left = Math.min(clientX, vw - mw - 8) + 'px';
+      menu.style.top  = Math.min(clientY + 4, vh - mh - 8) + 'px';
+    }
+
+    function hideQuickMenu() {
+      document.getElementById('quick-menu').classList.add('hidden');
+    }
+
+    // Lukk hurtigmeny ved klikk utenfor
+    document.addEventListener('mousedown', (e) => {
+      const menu = document.getElementById('quick-menu');
+      if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target)) {
+        hideQuickMenu();
+      }
+    }, true);
+
+    function openCanvasInput(canvasX, canvasY, defaultType) {
+      hideQuickMenu();
+      const display = document.getElementById('step-display');
+      display.querySelectorAll('.canvas-input').forEach(el => el.remove());
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'canvas-input';
+      input.style.left = canvasX + 'px';
+      input.style.top  = canvasY + 'px';
+      input.placeholder = defaultType === 'number' ? 'Tall...' : 'Tekst...';
+
+      let suppressBlur = false;
+
+      // Felles lagre-funksjon brukt av både Enter og blur
+      function commitInput(keepOpen) {
+        const val = input.value.trim();
+        if (!val) { if (!keepOpen) input.remove(); return; }
+
+        const fracM = val.match(/^(-?\d+(?:[.,]\d*)?)\s*\/\s*(-?\d+(?:[.,]\d*)?)$/);
+        if (fracM) {
+          saveUndo();
+          const token = makeToken('fraction', null, {
+            x: canvasX, y: canvasY,
+            numerator:   [{ value: fracM[1], color: null }],
+            denominator: [{ value: fracM[2], color: null }]
+          });
+          step().tokens.push(token);
+          state.selectedTokenIds.clear();
+          render();
+        } else {
+          const ops = { '+': '+', '-': '−', '*': '×', 'x': '×', '/': '÷', '=': '=', '%': '%' };
+          if (ops[val]) addItem('operator', ops[val], { x: canvasX, y: canvasY, color: null });
+          else if (/^[\d.,\s]+$/.test(val)) addItem('number', val, { x: canvasX, y: canvasY, color: null });
+          else addItem('text', val, { x: canvasX, y: canvasY, color: null });
+        }
+
+        if (keepOpen) {
+          input.value = '';
+          input.style.left = state.nextPlaceX + 'px';
+          input.style.top  = state.nextPlaceY + 'px';
+          suppressBlur = true;
+          setTimeout(() => { suppressBlur = false; input.focus(); }, 40);
+        } else {
+          input.remove();
+        }
+      }
+
+      input.addEventListener('keydown', (ev) => {
+        ev.stopPropagation();
+        if (ev.key === 'Escape') { input.remove(); return; }
+        if (ev.key === 'Enter')  { commitInput(true); return; }
+      });
+
+      // Auto-lagre ved blur (klikk bort) — uten å kreve Enter
+      input.addEventListener('blur', () => {
+        setTimeout(() => { if (!suppressBlur) commitInput(false); }, 100);
+      });
+
+      display.appendChild(input);
+      setTimeout(() => input.focus(), 30);
+    }
+
+    // ============================================================
+    // KLIPP / KOPIER / LIM
+    // ============================================================
+    function copyItem() {
+      const tokens = [...state.selectedTokenIds]
+        .map(id => step().tokens.find(t => t.id === id))
+        .filter(Boolean);
+      if (tokens.length) clipboard = tokens.map(t => JSON.parse(JSON.stringify(t)));
+    }
+
+    function cutItem() {
+      copyItem();
+      saveUndo();
+      [...state.selectedTokenIds].forEach(id => {
+        step().tokens = step().tokens.filter(t => t.id !== id);
+      });
+      state.selectedTokenIds.clear();
+      render();
+    }
+
+    function pasteItem() {
+      if (!clipboard || !clipboard.length) return;
+      saveUndo();
+      const newTokens = clipboard.map(t => {
+        const nt = JSON.parse(JSON.stringify(t));
+        nt.id  = uid();
+        nt.x   = (t.x || 60) + 30;
+        nt.y   = (t.y || 60) + 30;
+        return nt;
+      });
+      newTokens.forEach(t => step().tokens.push(t));
+      state.selectedTokenIds = new Set(newTokens.map(t => t.id));
+      render();
+    }
+
+    // ============================================================
+    // INLINE REDIGERING
+    // ============================================================
+    function startInlineEdit(token, wrapEl) {
+      // Fjern ev. eksisterende redigeringsfelter
+      document.querySelectorAll('.inline-edit').forEach(el => el.remove());
+
+      const display = document.getElementById('step-display');
+      const wrapRect = wrapEl.getBoundingClientRect();
+      const dispRect = display.getBoundingClientRect();
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'canvas-input inline-edit';
+      input.value = token.value;
+
+      // Plasser over elementet (i display-koordinater)
+      input.style.left   = (wrapRect.left - dispRect.left) + 'px';
+      input.style.top    = (wrapRect.top  - dispRect.top)  + 'px';
+      input.style.minWidth = Math.max(80, wrapRect.width) + 'px';
+
+      // Farge
+      if (token.color) {
+        const COLORS_MAP = { red:'#ef4444', blue:'#3b82f6', green:'#22c55e', orange:'#f97316', purple:'#a855f7', pink:'#ec4899', brown:'#92400e' };
+        input.style.color = COLORS_MAP[token.color] || '';
+      }
+
+      function commitEdit() {
+        const val = input.value.trim();
+        if (val !== '' && val !== token.value) {
+          saveUndo();
+          token.value = val;
+          render();
+        }
+        input.remove();
+      }
+
+      input.addEventListener('keydown', (ev) => {
+        ev.stopPropagation();
+        if (ev.key === 'Enter')  { commitEdit(); return; }
+        if (ev.key === 'Escape') { input.remove(); return; }
+      });
+      // Auto-lagre ved blur (klikk bort)
+      input.addEventListener('blur', () => setTimeout(commitEdit, 100));
+
+      display.appendChild(input);
+      input.focus();
+      input.select();
+    }
+
+    // Rediger brøk via popover (dobbeltklikk eller kontekstmeny)
+    function openFractionModalEdit(token) { openFracPopoverEdit(token); }
+
+    // ============================================================
+    // KONTEKSTMENY
+    // ============================================================
+    function showContextMenu(clientX, clientY, token) {
+      const menu = document.getElementById('context-menu');
+      menu.innerHTML = '';
+
+      const editable = ['number','text','currency','operator'].includes(token.type);
+      const items = [
+        editable ? { icon: '✏️', label: 'Rediger',  action: () => {
+          const el = document.querySelector(`[data-token-id="${token.id}"]`);
+          if (el) startInlineEdit(token, el);
+        }} : null,
+        token.type === 'fraction' ? { icon: '✏️', label: 'Rediger brøk', action: () => openFractionModalEdit(token) } : null,
+        { icon: '📋', label: 'Kopier',   action: () => { copyItem(); flashEl(token.id); }},
+        { icon: '✂️', label: 'Klipp ut', action: () => cutItem() },
+        { sep: true },
+        { icon: '🗑', label: 'Slett', danger: true, action: () => removeItem(token.id) },
+      ].filter(Boolean);
+
+      items.forEach(item => {
+        if (item.sep) {
+          const sep = document.createElement('div');
+          sep.className = 'ctx-sep';
+          menu.appendChild(sep);
+          return;
+        }
+        const el = document.createElement('div');
+        el.className = 'ctx-item' + (item.danger ? ' danger' : '');
+        el.innerHTML = `<span>${item.icon}</span><span>${item.label}</span>`;
+        el.onclick = () => { hideContextMenu(); item.action(); };
+        menu.appendChild(el);
+      });
+
+      // Lim inn (bare hvis clipboard er fylt)
+      if (clipboard) {
+        const sep = document.createElement('div'); sep.className = 'ctx-sep'; menu.appendChild(sep);
+        const el = document.createElement('div');
+        el.className = 'ctx-item';
+        el.innerHTML = `<span>📌</span><span>Lim inn kopi</span>`;
+        el.onclick = () => { hideContextMenu(); pasteItem(); };
+        menu.appendChild(el);
+      }
+
+      menu.classList.remove('hidden');
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const mw = 160, mh = menu.offsetHeight || 160;
+      menu.style.left = Math.min(clientX, vw - mw - 8) + 'px';
+      menu.style.top  = Math.min(clientY, vh - mh - 8) + 'px';
+    }
+
+    function hideContextMenu() {
+      document.getElementById('context-menu').classList.add('hidden');
+    }
+
+    function flashEl(tokenId) {
+      const el = document.querySelector(`[data-token-id="${tokenId}"]`);
+      if (!el) return;
+      el.classList.add('confirm-flash');
+      setTimeout(() => el.classList.remove('confirm-flash'), 450);
+    }
+
+    document.addEventListener('mousedown', () => hideContextMenu(), true);
+    document.addEventListener('keydown',   (e) => { if (e.key === 'Escape') hideContextMenu(); }, true);
+
+    // ============================================================
+    // PILER-PANEL
+    // ============================================================
+    const ARROWS = [
+      '→', '←', '↑', '↓', '↔', '↕',
+      '↗', '↘', '↙', '↖', '↺', '↻',
+      '⇒', '⇐', '⇑', '⇓', '⇔', '⇕',
+      '⟹', '⟸', '⟺', '↬', '↝', '↞'
+    ];
+
+    function toggleArrowsPanel() {
+      const panel = document.getElementById('arrows-panel');
+      const btn   = document.getElementById('arrows-toggle');
+      if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+      document.getElementById('math-panel').classList.add('hidden');
+      document.getElementById('emoji-panel').classList.add('hidden');
+
+      const r = btn.getBoundingClientRect();
+      panel.style.top  = (r.bottom + 6) + 'px';
+      panel.style.left = Math.max(6, r.left - 20) + 'px';
+      panel.innerHTML = '';
+      addCatTitle(panel, 'Piler');
+      const g = addGrid(panel);
+      ARROWS.forEach(arrow => {
+        const b = document.createElement('button');
+        b.className = 'emoji-btn';
+        b.style.fontSize = '1.6rem';
+        b.textContent = arrow;
+        b.onclick = (e) => { e.stopPropagation(); addItem('operator', arrow); };
+        g.appendChild(b);
+      });
+      panel.classList.remove('hidden');
+    }
+
+    // ============================================================
+    // MATTE-TEGN PANEL
+    // ============================================================
+    const MATH_SYMBOLS = {
+      'Grunnleggende': ['±', '∓', '∝', '∞', '°', '′', '″', '≈', '≠', '≡', '≤', '≥', '≪', '≫', '~'],
+      'Algebra':       ['√', '∛', '∜', 'π', 'ℯ', 'φ', 'Δ', 'δ', 'α', 'β', 'γ', 'θ', 'λ', 'μ', 'σ', 'ω'],
+      'Kalkulus':      ['∫', '∬', '∭', '∮', '∂', '∇', '∑', '∏', 'lim', 'dx', 'dy', 'dz'],
+      'Mengdelære':    ['∈', '∉', '∋', '⊂', '⊃', '⊆', '⊇', '∪', '∩', '∅', '∀', '∃', '¬'],
+    };
+
+    function toggleMathPanel() {
+      const panel = document.getElementById('math-panel');
+      const btn   = document.getElementById('math-toggle');
+      if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+      document.getElementById('arrows-panel').classList.add('hidden');
+      document.getElementById('emoji-panel').classList.add('hidden');
+
+      const r = btn.getBoundingClientRect();
+      panel.style.top  = (r.bottom + 6) + 'px';
+      panel.style.left = Math.max(6, r.left - 60) + 'px';
+      panel.innerHTML = '';
+      for (const [cat, syms] of Object.entries(MATH_SYMBOLS)) {
+        addCatTitle(panel, cat);
+        const g = addGrid(panel);
+        syms.forEach(sym => {
+          const b = document.createElement('button');
+          b.className = 'emoji-btn';
+          b.style.fontSize = sym.length > 2 ? '0.75rem' : '1.4rem';
+          b.style.fontFamily = "'Georgia','Times New Roman',serif";
+          b.textContent = sym;
+          b.onclick = (e) => { e.stopPropagation(); addItem('operator', sym); };
+          g.appendChild(b);
+        });
+      }
+      panel.classList.remove('hidden');
+    }
+
+    // ============================================================
+    // DOBBELTKLIKK PÅ CANVAS = SKRIV INN FELT
+    // ============================================================
+    document.getElementById('step-display')?.addEventListener?.('dblclick', (e) => {
+      if (e.target.id !== 'step-display' && e.target.id !== 'empty-hint') return;
+      const display = document.getElementById('step-display');
+      const rect = display.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      hideQuickMenu();
+      openCanvasInput(cx, cy, 'text');
+    });
+
+    function handleItemClick(tokenId, multiSelect = false) {
+      if (state.activeColor !== null) {
+        colorItem(tokenId, state.activeColor);
+        return;
+      }
+      if (multiSelect) {
+        // Cmd/Ctrl+klikk: toggle token i seleksjonen
+        if (state.selectedTokenIds.has(tokenId)) state.selectedTokenIds.delete(tokenId);
+        else state.selectedTokenIds.add(tokenId);
+      } else {
+        state.selectedTokenIds.clear();
+        state.selectedTokenIds.add(tokenId);
+      }
+      if (state.selectedTokenIds.size > 0) {
+        document.getElementById('math-input').blur();
+        document.getElementById('step-display').focus();
+      }
+      render();
+    }
+
+    // ============================================================
+    // STEG-PANEL
+    // ============================================================
+    function renderStepPanel() {
+      const list = document.getElementById('step-list');
+      list.innerHTML = '';
+      state.steps.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'step-card' + (i === state.activeStepIndex ? ' active' : '');
+
+        const num = document.createElement('span');
+        num.className = 'step-num';
+        num.textContent = i + 1;
+
+        const preview = document.createElement('span');
+        preview.className = 'step-preview';
+        preview.textContent = s.tokens.length === 0 ? '(tom)' : s.tokens.map(t => {
+          if (t.type === 'fraction') return (t.numerator?.[0]?.value || '?') + '/' + (t.denominator?.[0]?.value || '?');
+          if (t.type === 'banknote') return t.value + 'kr';
+          if (t.type === 'coin') return t.value + 'kr';
+          return t.value;
+        }).join(' ');
+
+        const del = document.createElement('span');
+        del.className = 'step-delete';
+        del.textContent = '×';
+        del.onclick = (e) => { e.stopPropagation(); deleteStep(i); };
+
+        card.append(num, preview, del);
+        card.onclick = () => setActiveStep(i);
+        list.appendChild(card);
+      });
+    }
+
+    // ============================================================
+    // TEMA / FULLSKJERM
+    // ============================================================
+    function toggleTheme() {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('mattebyggeren-theme', state.theme);
+      render();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.getElementById('app').requestFullscreen().catch(() => {});
+      else document.exitFullscreen();
+    }
+
+    // ============================================================
+    // HURTIGTASTER
+    // ============================================================
+    document.addEventListener('keydown', (e) => {
+      const input = document.getElementById('math-input');
+      const inInput = document.activeElement === input;
+      const inFracPop = !document.getElementById('frac-popover').classList.contains('hidden');
+      const inModal = inFracPop; // bakoverkompatibel alias
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && state.selectedTokenIds.size) { e.preventDefault(); copyItem(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x' && state.selectedTokenIds.size) { e.preventDefault(); cutItem(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteItem(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); addStep(); return; }
+      if (e.key === 'Enter' && inInput && !inModal) { e.preventDefault(); addFromInput(); return; }
+      if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); return; }
+
+      if (inInput || inModal) return;
+
+      if (e.key === 'ArrowRight') { e.preventDefault(); nextStep(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep(); return; }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedTokenIds.size) {
+        e.preventDefault();
+        saveUndo();
+        const toDelete = [...state.selectedTokenIds];
+        toDelete.forEach(id => { step().tokens = step().tokens.filter(t => t.id !== id); });
+        state.selectedTokenIds.clear();
+        render();
+        return;
+      }
+
+      if (e.altKey && e.key >= '1' && e.key <= '8') {
+        e.preventDefault();
+        setColor(COLORS[parseInt(e.key) - 1]?.name ?? null);
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        closeFracPopover();
+        state.selectedTokenIds.clear();
+        document.getElementById('emoji-panel').classList.add('hidden');
+        if (drawMode) toggleDrawMode();
+        if (lineMode) toggleLineMode();
+        render();
+      }
+
+      if (e.key.toLowerCase() === 'd' && !inInput && !inModal) { e.preventDefault(); toggleDrawMode(); return; }
+      if (e.key.toLowerCase() === 'l' && !inInput && !inModal) { e.preventDefault(); toggleLineMode(); return; }
+      // b = hurtigtast for brøk (når ikke i inputfelt)
+      if (e.key.toLowerCase() === 'b' && !inInput && !inModal) {
+        e.preventDefault();
+        const btn = document.getElementById('frac-toolbar-btn');
+        if (btn) openFracPopoverFromBtn(btn);
+        return;
+      }
+    });
+
+    // ============================================================
+    // ZOOM
+    // ============================================================
+    let zoomLevel = 1;
+    const ZOOM_STEP = 0.15;
+    const ZOOM_MIN = 0.3;
+    const ZOOM_MAX = 3;
+
+    function applyZoom() {
+      const display = document.getElementById('step-display');
+      display.querySelectorAll('.canvas-item').forEach(el => {
+        const tokenId = el.dataset.tokenId;
+        const token = step().tokens.find(t => t.id === tokenId);
+        const scale = (token?.scale || 1) * zoomLevel;
+        el.style.transform = `scale(${scale})`;
+        el.style.transformOrigin = 'top left';
+      });
+      document.getElementById('zoom-label').textContent = Math.round(zoomLevel * 100) + '%';
+    }
+
+    function zoomIn() {
+      zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP);
+      applyZoom();
+    }
+
+    function zoomOut() {
+      zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP);
+      applyZoom();
+    }
+
+    function resetZoom() {
+      zoomLevel = 1;
+      applyZoom();
+    }
+
+    // Ctrl+scroll for zoom
+    document.getElementById('step-display')?.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) zoomIn(); else zoomOut();
+      }
+    }, { passive: false });
+
+    // ============================================================
+    // REGELBOK
+    // ============================================================
+    const REGELBOK = {
+      'Potensregler': [
+        { navn: 'Produktregel',       formel: 'a^m · a^n = a^{m+n}' },
+        { navn: 'Divisjonsregel',     formel: 'a^m ÷ a^n = a^{m−n}' },
+        { navn: 'Potens av potens',   formel: '(a^m)^n = a^{mn}' },
+        { navn: 'Produktpotens',      formel: '(ab)^n = a^n · b^n' },
+        { navn: 'Kvotientpotens',     formel: '(a÷b)^n = a^n ÷ b^n' },
+        { navn: 'Nulleksponent',      formel: 'a^0 = 1' },
+        { navn: 'Negativ eksponent',  formel: 'a^{−n} = 1 ÷ a^n' },
+        { navn: 'Brøkeksponent',      formel: 'a^{1/n} = ⁿ√a' },
+        { navn: 'Kvadratrot',         formel: '√a = a^{1/2}' },
+        { navn: 'Generell roteksponent', formel: 'a^{m/n} = (ⁿ√a)^m' },
+      ],
+      'Logaritmer': [
+        { navn: 'Produktregel',       formel: 'log(a·b) = log(a) + log(b)' },
+        { navn: 'Divisjonsregel',     formel: 'log(a÷b) = log(a) − log(b)' },
+        { navn: 'Potensregel',        formel: 'log(a^n) = n · log(a)' },
+        { navn: 'log av grunntallet', formel: 'log_a(a) = 1' },
+        { navn: 'log av 1',           formel: 'log_a(1) = 0' },
+        { navn: 'Byttegrunntall',     formel: 'log_a(x) = ln(x) ÷ ln(a)' },
+        { navn: 'e og ln',            formel: 'e^{ln(x)} = x' },
+        { navn: 'ln av e',            formel: 'ln(e) = 1' },
+        { navn: 'Naturlig logaritme', formel: 'ln(x) = log_e(x)' },
+        { navn: 'Tierpotens',         formel: '10^{log(x)} = x' },
+      ],
+      'Derivasjon': [
+        { navn: 'Potensregel',        formel: '(x^n)\' = n · x^{n−1}' },
+        { navn: 'e^x',               formel: '(e^x)\' = e^x' },
+        { navn: 'e^{f(x)}',          formel: '(e^{f(x)})\' = f\'(x)·e^{f(x)}' },
+        { navn: 'a^x',               formel: '(a^x)\' = a^x · ln(a)' },
+        { navn: 'ln x',              formel: '(ln x)\' = 1 ÷ x' },
+        { navn: 'sin x',             formel: '(sin x)\' = cos x' },
+        { navn: 'cos x',             formel: '(cos x)\' = −sin x' },
+        { navn: 'tan x',             formel: '(tan x)\' = 1 ÷ cos^2(x)' },
+        { navn: 'Summeregel',         formel: '(f + g)\' = f\' + g\'' },
+        { navn: 'Differansregel',     formel: '(f − g)\' = f\' − g\'' },
+        { navn: 'Produktregel',       formel: '(f·g)\' = f\'·g + f·g\'' },
+        { navn: 'Kvotientregel',      formel: '(f÷g)\' = (f\'g − fg\') ÷ g^2' },
+        { navn: 'Kjerneregel',        formel: '(f(g(x)))\' = f\'(g)·g\'' },
+      ],
+      'Geometri': [
+        { navn: 'Areal sirkel',       formel: 'A = π · r^2' },
+        { navn: 'Omkrets sirkel',     formel: 'O = 2 · π · r' },
+        { navn: 'Areal trekant',      formel: 'A = (g · h) ÷ 2' },
+        { navn: 'Pytagoras',          formel: 'a^2 + b^2 = c^2' },
+        { navn: 'Areal rektangel',    formel: 'A = l · b' },
+        { navn: 'Areal trapes',       formel: 'A = ((a+b) ÷ 2) · h' },
+        { navn: 'Areal parallellogram', formel: 'A = g · h' },
+        { navn: 'Volum sylinder',     formel: 'V = π · r^2 · h' },
+        { navn: 'Volum kule',         formel: 'V = (4÷3) · π · r^3' },
+        { navn: 'Volum kjegle',       formel: 'V = (1÷3) · π · r^2 · h' },
+        { navn: 'Volum prisme',       formel: 'V = A_{bunn} · h' },
+        { navn: 'Overflate kule',     formel: 'O = 4 · π · r^2' },
+        { navn: 'Sinus-setningen',    formel: 'a÷sin(A) = b÷sin(B) = c÷sin(C)' },
+        { navn: 'Cosinus-setningen',  formel: 'c^2 = a^2 + b^2 − 2ab·cos(C)' },
+      ],
+    };
+
+    let regelbokActiveTab = Object.keys(REGELBOK)[0];
+
+    function toggleRegelbok() {
+      const panel = document.getElementById('regelbok-panel');
+      if (panel.classList.contains('hidden')) {
+        openRegelbok();
+      } else {
+        closeRegelbok();
+      }
+    }
+
+    function openRegelbok() {
+      document.getElementById('regelbok-panel').classList.remove('hidden');
+      document.getElementById('regelbok-toggle').classList.add('active');
+      renderRegelbok(regelbokActiveTab);
+    }
+
+    function closeRegelbok() {
+      document.getElementById('regelbok-panel').classList.add('hidden');
+      document.getElementById('regelbok-toggle').classList.remove('active');
+    }
+
+    function renderRegelbok(tab) {
+      regelbokActiveTab = tab;
+
+      // Tabs
+      const tabsEl = document.getElementById('regelbok-tabs');
+      tabsEl.innerHTML = '';
+      Object.keys(REGELBOK).forEach(name => {
+        const b = document.createElement('button');
+        b.className = 'regelbok-tab' + (name === tab ? ' active' : '');
+        b.textContent = name;
+        b.onclick = () => renderRegelbok(name);
+        tabsEl.appendChild(b);
+      });
+
+      // Regel-kort
+      const grid = document.getElementById('regelbok-grid');
+      grid.innerHTML = '';
+      REGELBOK[tab].forEach(regel => {
+        const card = document.createElement('div');
+        card.className = 'regel-card';
+
+        const navn = document.createElement('div');
+        navn.className = 'regel-navn';
+        navn.textContent = regel.navn;
+
+        const formel = document.createElement('div');
+        formel.className = 'regel-formel';
+        formel.innerHTML = parseMathValue(regel.formel);
+
+        const hint = document.createElement('div');
+        hint.className = 'regel-hint';
+        hint.textContent = '↙ Klikk for å sette inn';
+
+        card.append(navn, formel, hint);
+        card.onclick = () => insertRule(card, regel);
+        grid.appendChild(card);
+      });
+    }
+
+    function insertRule(cardEl, regel) {
+      // Sett inn formelen som et tekst-token på canvas
+      saveUndo();
+      const canvas = document.getElementById('step-display');
+      const rect = canvas.getBoundingClientRect();
+      // Plasser sentralt på synlig del av canvas
+      const x = Math.max(40, Math.min(state.nextPlaceX, rect.width * 0.6));
+      const y = state.nextPlaceY;
+      const token = makeToken('text', regel.formel, { x, y });
+      step().tokens.push(token);
+      state.selectedTokenIds = new Set([token.id]);
+      render();
+
+      // Visuell bekreftelse på kortet
+      cardEl.classList.add('inserted');
+      setTimeout(() => cardEl.classList.remove('inserted'), 800);
+    }
+
+    // ============================================================
+    // VERKTØY
+    // ============================================================
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // Konverterer x^2, x^{n+1}, x_i, x_{ij} til <sup>/<sub>-HTML.
+    // Alle verdier escapes, slik at injeksjon er umulig.
+    function parseMathValue(str) {
+      const parts = [];
+      let base = '';
+      let i = 0;
+      while (i < str.length) {
+        const ch = str[i];
+        if ((ch === '^' || ch === '_') && i + 1 < str.length) {
+          if (base) { parts.push({ type: 'text', val: base }); base = ''; }
+          const tag = ch === '^' ? 'sup' : 'sub';
+          i++;
+          if (str[i] === '{') {
+            const end = str.indexOf('}', i);
+            if (end !== -1) {
+              parts.push({ type: tag, val: str.slice(i + 1, end) });
+              i = end + 1;
+            } else {
+              // Ingen avsluttende } — behandle som vanlig tekst
+              base += ch + str[i]; i++;
+            }
+          } else {
+            parts.push({ type: tag, val: str[i] });
+            i++;
+          }
+        } else {
+          base += ch; i++;
+        }
+      }
+      if (base) parts.push({ type: 'text', val: base });
+      return parts.map(p =>
+        p.type === 'text' ? esc(p.val) : `<${p.type}>${esc(p.val)}</${p.type}>`
+      ).join('');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Brøk-popover listeners
+      document.getElementById('frac-pop-num').addEventListener('input', updateFracPopPreview);
+      document.getElementById('frac-pop-den').addEventListener('input', updateFracPopPreview);
+      document.getElementById('frac-pop-num').addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Tab') { e.preventDefault(); document.getElementById('frac-pop-den').focus(); }
+        if (e.key === 'Enter') insertFracFromPopover();
+        if (e.key === 'Escape') closeFracPopover();
+      });
+      document.getElementById('frac-pop-den').addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Tab') { e.preventDefault(); document.getElementById('frac-pop-num').focus(); }
+        if (e.key === 'Enter') insertFracFromPopover();
+        if (e.key === 'Escape') closeFracPopover();
+      });
+
+      // Lukk popover ved klikk utenfor
+      document.addEventListener('mousedown', (ev) => {
+        const pop = document.getElementById('frac-popover');
+        if (!pop.classList.contains('hidden') && !pop.contains(ev.target)) {
+          const btn = document.getElementById('frac-toolbar-btn');
+          if (!btn?.contains(ev.target)) closeFracPopover();
+        }
+      });
+
+      render();
+      focusInput();
+    });
+  </script>
+</body>
+</html>
