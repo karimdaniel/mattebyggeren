@@ -375,6 +375,32 @@
     }
 
     /* ============================
+       KVADRATROT
+       ============================ */
+    .item-sqrt {
+      display: inline-flex;
+      align-items: stretch;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 2.4rem;
+      line-height: 1;
+      padding: 0.1em 0.2em;
+    }
+    .item-sqrt .sqrt-symbol {
+      font-size: 1.4em;
+      line-height: 0.85;
+      align-self: flex-end;
+      margin-right: -0.1em;
+    }
+    .item-sqrt .sqrt-radicand {
+      border-top: 3px solid var(--text-primary);
+      padding: 0.1em 0.25em 0;
+      align-self: flex-start;
+      min-width: 0.6em;
+    }
+    .modal-preview .item-sqrt { font-size: 1.6rem; }
+    :fullscreen .item-sqrt { font-size: 3.2rem; }
+
+    /* ============================
        NORSKE SEDLER
        ============================ */
     .item-banknote {
@@ -1374,7 +1400,8 @@
         x, y,
         scale: opts.scale || 1,
         numerator: opts.numerator || null,
-        denominator: opts.denominator || null
+        denominator: opts.denominator || null,
+        radicand: opts.radicand || null
       };
     }
 
@@ -1521,6 +1548,21 @@
       const input = document.getElementById('math-input');
       const val = input.value.trim();
       if (!val) return;
+
+      // Auto-detekter kvadratrot: "sqrt(5)" eller "sqrt(x^2+1)" → sqrt-token
+      const sqrtMatch = val.match(/^sqrt\s*\(\s*(.+?)\s*\)$/i);
+      if (sqrtMatch) {
+        saveUndo();
+        const token = makeToken('sqrt', null, {
+          radicand: [{ value: sqrtMatch[1], color: state.activeColor }]
+        });
+        step().tokens.push(token);
+        state.selectedTokenIds.clear();
+        render();
+        input.value = '';
+        input.focus();
+        return;
+      }
 
       // Auto-detekter brøk: "3/4" eller "2/3" → brøk-token
       const fracMatch = val.match(/^(-?\d+(?:[.,]\d*)?)\s*\/\s*(-?\d+(?:[.,]\d*)?)$/);
@@ -1854,6 +1896,22 @@
 
           frac.append(num, line, den);
           wrap.appendChild(frac);
+          break;
+        }
+        case 'sqrt': {
+          const root = document.createElement('div');
+          root.className = 'item-sqrt';
+          const sym = document.createElement('span');
+          sym.className = 'sqrt-symbol';
+          sym.textContent = '√';
+          const rad = document.createElement('span');
+          rad.className = 'sqrt-radicand';
+          if (token.radicand?.[0]) {
+            if (token.radicand[0].color) rad.setAttribute('data-color', token.radicand[0].color);
+            rad.innerHTML = parseMathValue(token.radicand[0].value);
+          }
+          root.append(sym, rad);
+          wrap.appendChild(root);
           break;
         }
         case 'banknote': {
@@ -2627,6 +2685,7 @@
         preview.className = 'step-preview';
         preview.textContent = s.tokens.length === 0 ? '(tom)' : s.tokens.map(t => {
           if (t.type === 'fraction') return (t.numerator?.[0]?.value || '?') + '/' + (t.denominator?.[0]?.value || '?');
+          if (t.type === 'sqrt') return '√(' + (t.radicand?.[0]?.value || '?') + ')';
           if (t.type === 'banknote') return t.value + 'kr';
           if (t.type === 'coin') return t.value + 'kr';
           return t.value;
