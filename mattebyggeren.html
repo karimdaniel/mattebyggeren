@@ -2498,7 +2498,11 @@
       setTimeout(() => el.classList.remove('confirm-flash'), 450);
     }
 
-    document.addEventListener('mousedown', () => hideContextMenu(), true);
+    document.addEventListener('mousedown', (e) => {
+      const menu = document.getElementById('context-menu');
+      if (menu && menu.contains(e.target)) return;
+      hideContextMenu();
+    }, true);
     document.addEventListener('keydown',   (e) => { if (e.key === 'Escape') hideContextMenu(); }, true);
 
     // ============================================================
